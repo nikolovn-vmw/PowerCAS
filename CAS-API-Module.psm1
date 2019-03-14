@@ -11,7 +11,7 @@
 ######Script Parameters#######
 <#
 Param(
-    [ValidateNotNullOrEmpty()][string]$ConfigOperation
+    [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$ConfigOperation
 )
 
 add-type @"
@@ -48,7 +48,7 @@ function New-CASAPIClient
 {
     [cmdletbinding()]
     param (
-        [ValidateNotNullOrEmpty()][string]$refreshToken="",
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$refreshToken="",
         [ValidateNotNullOrEmpty()][string]$organization="DEFAULT"
     )
     $body = @{}
@@ -150,7 +150,7 @@ function New-CASAPIClient
 function Set-CASAPIActiveOrganization
 {
     param (
-        [ValidateNotNullOrEmpty()][string]$organization
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$organization
     )
 
     $orgExists = $false
@@ -192,9 +192,9 @@ function Invoke-CASAPI
 {
     param(
         [string]$organization,
-        [ValidateNotNullOrEmpty()][uri]$apiURI="",
-        [ValidateNotNullOrEmpty()][hashtable]$reqBody=@{},
-        [ValidateNotNullOrEmpty()][hashtable]$reqHeaders=@{},
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][uri]$apiURI="",
+        [hashtable]$reqBody=@{},
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][hashtable]$reqHeaders=@{},
         [string]$method="GET"
     )
 
@@ -262,7 +262,10 @@ function Invoke-CASAPI
         $result = try {Invoke-RestMethod -Uri $apiURI.OriginalString -Headers $reqHeaders -Body (ConvertTo-JSON $reqBody) -Method $method -TimeoutSec 0 } catch {$_.Exception.Response}
     }
     $statusCode = ""
-    if ($result.PSobject.Properties.name -match "StatusCode"){$statusCode = $result.StatusCode}
+    if($result -ne $null)
+    {
+        if ($result.PSobject.Properties.name -match "StatusCode"){$statusCode = $result.StatusCode}
+    }
     if ($statusCode -eq "Unauthorized")
     {
         Write-Host "ERROR: Current token is invalid. Please, regenerate the token for the current organization ($organization)." -ForegroundColor Red
@@ -274,17 +277,17 @@ function Invoke-CASAPI
 function Get-CASDeployments
 {
     param(
-        [string][Parameter(ParameterSetName="Id")]$DeploymentIds,
-        [string][Parameter(ParameterSetName="Name")]$Name,
-        [string][Parameter(ParameterSetName="Project")]$Projects,
-        [string][Parameter(ParameterSetName="Search")]$Search,
-        [string][Parameter(ParameterSetName="Templates")]$Templates,
+        [string][ValidateNotNullOrEmpty()][Parameter(ParameterSetName="Id")]$DeploymentIds,
+        [string][ValidateNotNullOrEmpty()][Parameter(ParameterSetName="Name")]$Name,
+        [string][ValidateNotNullOrEmpty()][Parameter(ParameterSetName="Project")]$Projects,
+        [string][ValidateNotNullOrEmpty()][Parameter(ParameterSetName="Search")]$Search,
+        [string][ValidateNotNullOrEmpty()][Parameter(ParameterSetName="Templates")]$Templates,
         [string]$ExpandLastRequest = "false",
         [string]$ExpandMetadata = "false",
         [string]$ExpandProject = "false",
         [string]$ExpandResources = "false",
         [string]$Sort,
-        [string][Parameter(ParameterSetName="GetAll")]$GetAll = "true"
+        [string][ValidateNotNullOrEmpty()][Parameter(ParameterSetName="GetAll")]$GetAll = "true"
     )
     $urlParams = "ExpandLastRequest=$expandLastRequest&ExpandMetadata=$expandMetadata&ExpandProject=$expandProject&ExpandResources=$expandResources"
     if($sort)
@@ -309,7 +312,7 @@ function Get-CASDeployments
 function Get-CASDeployment
 {
     param(
-        [ValidateNotNullOrEmpty()][string]$DeploymentId,
+        [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$DeploymentId,
         [string]$ExpandLastRequest = "false",
         [string]$ExpandMetadata = "false",
         [string]$ExpandProject = "false",
@@ -321,20 +324,10 @@ function Get-CASDeployment
     return $result
 }
 
-function Get-CASDeploymentActions
-{
-    param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId
-    )
-
-    $result = Invoke-CASAPI -apiUri "$CASURI/deployment/api/deployments/$DeploymentId/actions" -reqHeaders $reqHeaders
-
-    return $result
-}
 function Get-CASDeploymentAction
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
         [string][ValidateNotNullOrEmpty()]$ActionId
     )
 
@@ -346,7 +339,8 @@ function Get-CASDeploymentAction
 function Get-CASDeploymentResources
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
+
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
         [string]$ExpandMetadata = "false",
         [string]$Sort
     )
@@ -363,8 +357,8 @@ function Get-CASDeploymentResources
 function Get-CASDeploymentResource
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
-        [string][ValidateNotNullOrEmpty()]$ResourceId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ResourceId,
         [string]$ExpandMetadata = "false"
     )
     $urlParams = "expandMetadata=$expandMetadata"
@@ -373,23 +367,23 @@ function Get-CASDeploymentResource
     return $result
 }
 
-function Get-CASRresourceActions
+function Get-CASResourceActions
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
-        [string][ValidateNotNullOrEmpty()]$ResourceId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ResourceId
     )
     $result = Invoke-CASAPI -apiUri "$CASURI/deployment/api/deployments/$DeploymentId/resources/$ResourceId/actions" -reqHeaders $reqHeaders
 
     return $result
 }
 
-function Get-CASRresourceAction
+function Get-CASResourceAction
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
-        [string][ValidateNotNullOrEmpty()]$ResourceId,
-        [string][ValidateNotNullOrEmpty()]$ActionId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ResourceId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ActionId
     )
     $result = Invoke-CASAPI -apiUri "$CASURI/deployment/api/deployments/$DeploymentId/resources/$ResourceId/actions/$ActionId" -reqHeaders $reqHeaders
 
@@ -399,18 +393,23 @@ function Get-CASRresourceAction
 function Test-CASDeploymentExists
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentName
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentName
     )
     $result = Invoke-CASAPI -apiUri "$CASURI/deployment/api/deployments/names/$DeploymentName" -reqHeaders $reqHeaders
-
-    return $result
+    if($result -eq "")
+    {
+        return $true
+    } else 
+    {
+        return $false
+    }
 }
 
 function Send-CASDeploymentAction
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$RequestId,
-        [string][ValidateNotNullOrEmpty()][ValidateSet("cancel", "pause", "resume")]$Action
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$RequestId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][ValidateSet("cancel", "pause", "resume")]$Action
     )
     $result = Invoke-CASAPI -apiUri "$CASURI/deployment/api/requests/$RequestId`?action=$Action" -reqHeaders $reqHeaders -reqBody @{} -method "POST"
 
@@ -420,7 +419,7 @@ function Send-CASDeploymentAction
 function Remove-CASDeployment
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId
     )
     $result = Invoke-CASAPI -apiUri "$CASURI/deployment/api/deployments/$DeploymentId" -reqHeaders $reqHeaders -reqBody @{} -method "DELETE"
 
@@ -431,11 +430,11 @@ function Remove-CASDeployment
 function Update-CASDeployment
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
-        [string][ValidateNotNullOrEmpty()]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
         [string]$Description,
-        [hashtable][ValidateNotNullOrEmpty()]$Inputs,
-        [string][ValidateNotNullOrEmpty()]$Name
+        [hashtable][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Inputs,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Name
     )
     $reqBody = @{}
     $reqBody.Add("blueprintId", $BlueprintId)
@@ -451,10 +450,10 @@ function Update-CASDeployment
 function New-CASDeploymentResourceAction
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
-        [string][ValidateNotNullOrEmpty()]$ActionId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ActionId,
         [string]$Reason,
-        [hashtable][ValidateNotNullOrEmpty()]$Inputs
+        [hashtable]$Inputs = @{}
     )
     $reqBody = @{}
     $reqBody.Add("actionId", $ActionId)
@@ -469,8 +468,8 @@ function New-CASDeploymentResourceAction
 function Remove-CASDeploymentResource
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
-        [string][ValidateNotNullOrEmpty()]$ResourceId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ResourceId
     )
 
     $result = Invoke-CASAPI -apiUri "$CASURI/deployment/api/deployments/$DeploymentId/resources/$ResourceId" -reqHeaders $reqHeaders -reqBody @{} -method "DELETE"
@@ -481,11 +480,11 @@ function Remove-CASDeploymentResource
 function New-CASResourceAction
 {
     param(
-        [string][ValidateNotNullOrEmpty()]$DeploymentId,
-        [string][ValidateNotNullOrEmpty()]$ResourceId,
-        [string][ValidateNotNullOrEmpty()]$ActionId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ResourceId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ActionId,
         [string]$Reason,
-        [hashtable][ValidateNotNullOrEmpty()]$Inputs
+        [hashtable][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Inputs
     )
     $reqBody = @{}
     $reqBody.Add("actionId", $ActionId)
@@ -503,7 +502,7 @@ function Get-CASBlueprints
     param(
         [string]$Expand="true",
         [string]$Released="false",
-        [string]$OrderBy="updatedAt DESC",
+        [string]$orderBy="updatedAt DESC",
         [string]$Versioned="false",
         [string]$Fields,
         [string]$Name,
@@ -511,7 +510,7 @@ function Get-CASBlueprints
         [string]$Search,
         [string]$Tags
     )
-    $urlParams = "expand=$Expand&OrderBy=$OrderBy&released=$Released&versioned=$Versioned"
+    $urlParams = "expand=$Expand&orderBy=`'$orderBy`'&released=$Released&versioned=$Versioned"
     if($Fields) { $urlParams = $urlParams + "&fields=$Fields" }
     if($Name) {$urlParams = $urlParams + "&name=$Name"}
     if($Projects){$urlParams = $urlParams + "&projects=$Projects"}
@@ -526,10 +525,10 @@ function Get-CASBlueprints
 function Get-CASBlueprint
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId
     )
 
-    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/$BlueprintId" -reqHeaders $reqHeaders
+    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprints/$BlueprintId" -reqHeaders $reqHeaders
 
     return $result
 }
@@ -537,10 +536,10 @@ function Get-CASBlueprint
 function Get-CASBlueprintSchema
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId
     )    
  
-    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/$BlueprintId/input-schema" -reqHeaders $reqHeaders
+    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprints/$BlueprintId/inputs-schema" -reqHeaders $reqHeaders
 
     return $result
 }
@@ -548,18 +547,18 @@ function Get-CASBlueprintSchema
 function Get-CASBlueprintVersions
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
         [string]$Expand="true",
         [string]$Fields,
         [string]$orderBy = "updatedAt DESC",
         [string][ValidateSet("VERSIONED", "RELEASED")]$Status
     )    
  
-    $urlParams = "expand=$Expand&OrderBy=$OrderBy"
+    $urlParams = "expand=$Expand&OrderBy=`'$orderBy`'"
     if($Fields) { $urlParams = $urlParams + "&fields=$Fields" }
     if($Status) { $urlParams = $urlParams + "&status=$Status" }
 
-    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/$BlueprintId/versions?$urlParams" -reqHeaders $reqHeaders
+    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprints/$BlueprintId/versions?$urlParams" -reqHeaders $reqHeaders
 
     return $result
 }
@@ -567,11 +566,11 @@ function Get-CASBlueprintVersions
 function Get-CASBlueprintVersion
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId,
-        [string][ValidateNotNullOrEmpty]$Version
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Version
     )    
  
-    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/$BlueprintId/versions/$Version" -reqHeaders $reqHeaders
+    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprints/$BlueprintId/versions/$Version" -reqHeaders $reqHeaders
 
     return $result
 }
@@ -579,12 +578,12 @@ function Get-CASBlueprintVersion
 function Get-CASBlueprintEvents
 {
     param(
-        [string][ValidateNotNullOrEmpty]$DeploymentId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$DeploymentId,
         [string]$orderBy = "createdAt DESC",
         [string]$RequestId
     )    
  
-    $urlParams = "OrderBy=$OrderBy"
+    $urlParams = "orderBy=`'$orderBy`'"
     if($RequestId) { $urlParams = $urlParams + "&requestId=$RequestId" }
 
     $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprint-deployments/$DeploymentID/events?$urlParams" -reqHeaders $reqHeaders
@@ -602,7 +601,7 @@ function Get-CASBlueprintRequests
         [string]$orderBy = "updatedAt DESC"
     )    
  
-    $urlParams = "deploymentId=$DeploymentId&OrderBy=$OrderBy&expand=$Expand&IncludePlan=$IncludePlan"
+    $urlParams = "deploymentId=$DeploymentId&orderBy=`'$orderBy`'&expand=$Expand&IncludePlan=$IncludePlan"
     if($Fields) { $urlParams = $urlParams + "&fields=$Fields" }
     if($DeploymentId) { $urlParams = $urlParams + "&deploymentID=$DeploymentId" }
     $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprint-requests?$urlParams" -reqHeaders $reqHeaders
@@ -613,7 +612,7 @@ function Get-CASBlueprintRequests
 function Get-CASBlueprintRequest
 {
     param(
-        [string][ValidateNotNullOrEmpty]$RequestId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$RequestId
     )    
  
     $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprint-requests/$RequestId" -reqHeaders $reqHeaders
@@ -624,7 +623,7 @@ function Get-CASBlueprintRequest
 function Get-CASBlueprintRequestPlan
 {
     param(
-        [string][ValidateNotNullOrEmpty]$RequestId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$RequestId,
         [string]$Expand="false"
     )    
     $urlParams = "expand=$Expand"
@@ -636,7 +635,7 @@ function Get-CASBlueprintRequestPlan
 function Get-CASBlueprintRequestResourcePlan
 {
     param(
-        [string][ValidateNotNullOrEmpty]$RequestId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$RequestId,
         [string]$Expand="false"
     )    
     $urlParams = "expand=$Expand"
@@ -655,7 +654,7 @@ function Get-CASBlueprintProviderResources
         [string]$Search
         
     )    
-    $urlParams = "expand=$Expand&orderby=OrderBy"
+    $urlParams = "expand=$Expand&orderBy=`'$OrderBy`'"
     if($Name) { $urlParams = $urlParams + "&name=$Name" }
     if($ProviderId) { $urlParams = $urlParams + "&providerId=$ProviderId" }
     if($Search) { $urlParams = $urlParams + "&search=$Search" }
@@ -668,7 +667,7 @@ function Get-CASBlueprintProviderResources
 function Get-CASBlueprintProviderResource
 {
     param(
-        [string][ValidateNotNullOrEmpty]$ResourceTypeId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ResourceTypeId
     )    
   
     $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/provider-resources/$ResourceTypeId" -reqHeaders $reqHeaders
@@ -679,10 +678,10 @@ function Get-CASBlueprintProviderResource
 function  New-CASBlueprint
 {
     param(
-        [string][ValidateNotNullOrEmpty]$Name,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Name,
         [string]$Description,
-        [string][ValidateNotNullOrEmpty]$ProjectId,
-        [string][ValidateNotNullOrEmpty]$Content,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ProjectId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Content,
         [string]$Tags
     )
     $blueprintBody = @{}
@@ -701,11 +700,11 @@ function  New-CASBlueprint
 function Update-CASBlueprint
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId,
-        [string][ValidateNotNullOrEmpty]$Name,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Name,
         [string]$Description,
-        [string][ValidateNotNullOrEmpty]$ProjectId,
-        [string][ValidateNotNullOrEmpty]$Content,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ProjectId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Content,
         [string]$Tags
     )
     $blueprintBody = @{}
@@ -725,7 +724,7 @@ function Update-CASBlueprint
 function Remove-CASBlueprint
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId
     )
 
     $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprints/$BlueprintId" -reqHeaders $reqHeaders -reqBody @{} -method "DELETE"
@@ -736,8 +735,8 @@ function Remove-CASBlueprint
 function New-CASBlueprintVersion
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId,
-        [string][ValidateNotNullOrEmpty]$Version,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Version,
         [string]$ChangeLog,
         [string]$Description
     )
@@ -755,8 +754,8 @@ function New-CASBlueprintVersion
 function New-CASBlueprintVersionRelease
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId,
-        [string][ValidateNotNullOrEmpty]$Version
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Version
     )
 
     $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprints/$BlueprintId/versions/$Version/action/release" -reqHeaders $reqHeaders -reqBody @{} -method "POST"
@@ -767,8 +766,8 @@ function New-CASBlueprintVersionRelease
 function Restore-CASBlueprintVersion
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId,
-        [string][ValidateNotNullOrEmpty]$Version
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Version
     )
 
     $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprints/$BlueprintId/versions/$Version/action/restore" -reqHeaders $reqHeaders -reqBody @{} -method "POST"
@@ -779,8 +778,8 @@ function Restore-CASBlueprintVersion
 function Remove-CASBlueprintVersionRelease
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId,
-        [string][ValidateNotNullOrEmpty]$Version
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Version
     )
 
     $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprints/$BlueprintId/versions/$Version/action/unrelease" -reqHeaders $reqHeaders -reqBody @{} -method "POST"
@@ -791,33 +790,33 @@ function Remove-CASBlueprintVersionRelease
 function New-CASBlueprintRequest
 {
     param(
-        [string][ValidateNotNullOrEmpty]$BlueprintId,
-        [string][ValidateNotNullOrEmpty]$Version,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$BlueprintId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$Version,
         [string]$Content, #CHeck use
         [string]$DeploymentID, #check use
         [string]$DeploymentName, 
         [bool]$Destroy=$true, #check use
         [bool]$Plan=$true,
-        [string][ValidateNotNullOrEmpty]$ProjectId,
+        [string][Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()]$ProjectId,
         [string]$Reason,
         [string]$Tags
     )
 
-    $requestBody = @{}
-    $requestBody.Add("blueprintId", $BlueprintId)
-    $requestBody.Add("version", $Version)
-    $requestBody.Add("content", $Content)
-    $requestBody.Add("deploymentId", $DeploymentID)
-    $requestBody.Add("deploymentName", $DeploymentName)
-    $requestBody.Add("destroy", $Destroy)
-    $requestBody.Add("plan", $Plan)
-    $requestBody.Add("projectId", $ProjectId)
-    $requestBody.Add("reason", $Reason)
+    $blueprintBody = @{}
+    $blueprintBody.Add("blueprintId", $BlueprintId)
+    $blueprintBody.Add("version", $Version)
+    $blueprintBody.Add("content", $Content)
+    $blueprintBody.Add("deploymentId", $DeploymentID)
+    $blueprintBody.Add("deploymentName", $DeploymentName)
+    $blueprintBody.Add("destroy", $Destroy)
+    $blueprintBody.Add("plan", $Plan)
+    $blueprintBody.Add("projectId", $ProjectId)
+    $blueprintBody.Add("reason", $Reason)
 
     $tagsArray = $Tags.split(",")
     $blueprintBody.Add("tags", $tagsArray)
 
-    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprint-requests" -reqHeaders $reqHeaders -reqBody $requestBody -method "POST"
+    $result = Invoke-CASAPI -apiUri "$CASURI/blueprint/api/blueprint-requests" -reqHeaders $reqHeaders -reqBody $blueprintBody -method "POST"
 
     return $result
 }
