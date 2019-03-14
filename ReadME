@@ -4,24 +4,34 @@ It is currently in development.
 
 Features in latest version:
 
-- multi-organizational support
+- Multi-organizational support
 
-- Almost 100% of Deployment and Blueprint APIs
+- 100% of Deployment and Blueprint APIs
 
 - Ability to directly call a custom API url
 
-Missing features: pagination and filtering for many "Get-" cmdlets, documentation, additional filteirng and manipulation features not present in API, security features
+- Ability to treat each response as an object and manipulate its data. 
+
+- Basic input validation
+
+Missing features: pagination and filtering for many "Get-" cmdlets, detailed documentation, additional filtering and manipulation features not present in API, security features
 
 Here's a short how to:
 
-Import-Module CAS-API-Module.psd1
+1. Open PowerShell, change directory to the location of the module files and issue: 
+  Import-Module CAS-API-module.psd1
+2. Create new API client:
+  New-CASAPIClient [-refreshToken <string>] [-organization <string>] (EXAMPLE: New-CASAPIClient -refreshToken {your-refresh-token}  -organization <your-organization-name-no-spaces>). The {organization} parameter is not mandatory - if it is not specified, the organization name is set to "DEFAULT". You will be prompted whether you want this organization to be the the active one for the session.
+  This command generates a token based on a refresh token you provide. If you do not specify an organization, it is registered under DEFAULT.
+3. Try a cmdlet, e.g.:
+  Get-Deployments -search "MyDeployment02"
+4. List all cmdlets by issuing:
+  Get-Command -Module CAS-API-Module
+5. If you have multiple tokens for multiple organizations (or the same one) you can switch context with:
+  Set-CASAPIActiveOrganization [-organization <string>] - Sets the specified organization as the currently active one for the session. The organization name should be already added to the list of organization by uing New-CASAPIClient
+6. If there is an API that is not currently available as a cmdlet or the cmdlet does not offer a certain option, you can issue:
+  Invoke-CASAPI [-apiURI <string>] [-reqBody <hashtable>] [-reqHeaders <hashtable>] [-method <string>] [-organization <string>] - Invokes a CAS API specified by the {apiURI} parameter, which should be an absolute API URI in the form of https://api.mgmt.cloud.vmware.com/service/operation. The {organization} parameter is not mandatory, so if you do not specify an existing organization, it will use the currently active one for the session. The {method} parameter defaults to "GET" if not specified - possible values: "GET", "PUT", "UPDATE", "POST", "DELETE". The {reqBody} parameter is mandatory when using any method other than "GET" and if you want to send an empty body, just type "@{}" for its value. If the {reHeaders} parameter has a key with name "Authorization", it will be discarded and instead it will use the "Authorization" value for the curently selected organization.
+  e.g. Invoke-CASAPI -apiURI "https://api.mgmt.cloud.vmware.com/deployment/api/deployments?getall=true" -reqHeaders @{"Accept"="application/json"; "Content-Type"="application/json" -method GET -organization DEFAULT
 
-New-CASAPIClient [-refreshToken <string>] [-organization <string>] (EXAMPLE: New-CASAPIClient -refreshToken {your-refresh-token}  -organization <your-organization-name-no-spaces>). The {organization} parameter is not mandatory - if it is not specified, the organization name is set to "DEFAULT". You will be prompted whether you want this organization to be the the active one for the session.
+Every cmdlet is in the format VERB-CAS{Object}, i.e. Get-CASDeployments, Remove-CASBlueprint, etc.
 
-Set-CASAPIActiveOrganization [-organization <string>] - Sets the specified organization as the currently active one for the session. The organization name should be already added to the list of organization by uing New-CASAPIClient
-
-Invoke-CASAPI [-apiURI <string>] [-reqBody <hashtable>] [-reqHeaders <hashtable>] [-method <string>] [-organization <string>] - Invokes a CAS API specified by the {apiURI} parameter, which should be an absolute API URI in the form of https://api.mgmt.cloud.vmware.com/service/operation. The {organization} parameter is not mandatory, so if you do not specify an existing organization, it will use the currently active one for the session. The {method} parameter defaults to "GET" if not specified - possible values: "GET", "PUT", "UPDATE", "POST", "DELETE". The {reqBody} parameter is mandatory when using any method other than "GET" and if you want to send an empty body, just type "@{}" for its value. If the {reHeaders} parameter has a key with name "Authorization", it will be discarded and instead it will use the "Authorization" value for the curently selected organization.
-
-Every cmdlet is in the format VERB-CAS{Object}, i.e. Get-CASAPIDeployments, Remove-CASAPIBlueprint, etc.
-
-You can see which commands are exported by using Get-Module CAS-API-Module.
